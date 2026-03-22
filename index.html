@@ -54,6 +54,13 @@
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .controls-left, .controls-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .btn {
             padding: 10px 20px;
@@ -265,10 +272,8 @@
             }
         }
     </style>
-    <!-- 内嵌mammoth.js 用于Word文档解析 -->
-    <script>
-!function(f){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=f();else if("function"==typeof define&&define.amd)define([],f);else{var g;g="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,g.mammoth=f()}}(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a="function"==typeof require&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}for(var i="function"==typeof require&&require,o=0;o<r.length;o++)s(r[o]);return s}({1:[function(require,module,exports){function Files(){function read(uri){return promises.reject(new Error("could not open external image: '"+uri+"'\ncannot open linked files from a web browser"))}return{read:read}}var promises=require("../../lib/promises");exports.Files=Files},{"../../lib/promises":23}],2:[function(require,module,exports){function openZip(options){return options.arrayBuffer?promises.resolve(zipfile.openArrayBuffer(options.arrayBuffer)):promises.reject(new Error("Could not find file in options"))}var promises=require("../lib/promises"),zipfile=require("../lib/zipfile");exports.openZip=openZip},{"../lib/promises":23,"../lib/zipfile":40}],3:[function(require,module,exports){function DocumentConverter(options){return{convertToHtml:function(element){var comments=_.indexBy(element.type===documents.types.document?element.comments:[],"commentId"),conversion=new DocumentConversion(options,comments);return conversion.convertToHtml(element)}}}function DocumentConversion(options,comments){function convertToHtml(document){var messages=[],html=elementToHtml(document,messages,{}),deferredNodes=[];walkHtml(html,function(node){"deferred"===node.type&&deferredNodes.push(node)});var deferredValues={};return promises.mapSeries(deferredNodes,function(deferred){return deferred.value().then(function(value){deferredValues[deferred.id]=value})}).then(function(){function replaceDeferred(nodes){return flatMap(nodes,function(node){return"deferred"===node.type?deferredValues[deferred.id]:node.children?[_.extend({},node,{children:replaceDeferred(node.children)})]:[node]})}var writer=writers.writer({prettyPrint:options.prettyPrint,outputFormat:options.outputFormat});return Html.write(writer,Html.simplify(replaceDeferred(html))),new results.Result(writer.asString(),messages)})}function convertElements(elements,messages,options){return flatMap(elements,messages,options)}function elementToHtml(element,messages,options){if(!options)throw new Error("options not set");var handler=elementConverters[element.type];return handler?handler(element,messages,options):[]}function convertParagraph(element,messages,options){return htmlPathForParagraph(element,messages).wrap(function(){var content=convertElements(element.children,messages,options);return ignoreEmptyParagraphs?content:[Html.forceWrite].concat(content)})}function htmlPathForParagraph(element,messages){var style=findStyle(element);return style?style.to:(element.styleId&&messages.push(unrecognisedStyleWarning("paragraph",element)),defaultParagraphStyle)}function convertRun(run,messages,options){var nodes=function(){return convertElements(run.children,messages,options)},paths=[];run.isSmallCaps&&paths.push(findHtmlPathForRunProperty("smallCaps")),run.isAllCaps&&paths.push(findHtmlPathForRunProperty("allCaps")),run.isStrikethrough&&paths.push(findHtmlPathForRunProperty("strikethrough","s")),run.isUnderline&&paths.push(findHtmlPathForRunProperty("underline")),run.verticalAlignment===documents.verticalAlignment.subscript&&paths.push(htmlPaths.element("sub",{},{fresh:!1})),run.verticalAlignment===documents.verticalAlignment.superscript&&paths.push(htmlPaths.element("sup",{},{fresh:!1})),run.isItalic&&paths.push(findHtmlPathForRunProperty("italic","em")),run.isBold&&paths.push(findHtmlPathForRunProperty("bold","strong"));var stylePath=htmlPaths.empty,style=findStyle(run);return style?stylePath=style.to:run.styleId&&messages.push(unrecognisedStyleWarning("run",run)),paths.push(stylePath),paths.forEach(function(path){nodes=path.wrap.bind(path,nodes)}),nodes()}function findHtmlPathForRunProperty(elementType,defaultTagName){var path=findHtmlPath({type:elementType});return path?path:defaultTagName?htmlPaths.element(defaultTagName,{},{fresh:!1}):htmlPaths.empty}function findHtmlPath(element,defaultPath){var style=findStyle(element);return style?style.to:defaultPath}function findStyle(element){for(var i=0;i<styleMap.length;i++)if(styleMap[i].from.matches(element))return styleMap[i]}function recoveringConvertImage(convertImage){return function(image,messages){return promises.attempt(function(){return convertImage(image,messages)}).caught(function(error){return messages.push(results.error(error)),[]})}}function noteHtmlId(note){return referentHtmlId(note.noteType,note.noteId)}function noteRefHtmlId(note){return referenceHtmlId(note.noteType,note.noteId)}function referentHtmlId(referenceType,referenceId){return htmlId(referenceType+"-"+referenceId)}function referenceHtmlId(referenceType,referenceId){return htmlId(referenceType+"-ref-"+referenceId)}function htmlId(suffix){return idPrefix+suffix}function convertTable(element,messages,options){return findHtmlPath(element,defaultTablePath).wrap(function(){return convertTableChildren(element,messages,options)})}function convertTableChildren(element,messages,options){var bodyIndex=_.findIndex(element.children,function(child){return!child.type===documents.types.tableRow||!child.isHeader});-1===bodyIndex&&(bodyIndex=element.children.length);var children;if(0===bodyIndex)children=convertElements(element.children,messages,_.extend({},options,{isTableHeader:!1}));else{var headRows=convertElements(element.children.slice(0,bodyIndex),messages,_.extend({},options,{isTableHeader:!0})),bodyRows=convertElements(element.children.slice(bodyIndex),messages,_.extend({},options,{isTableHeader:!1}));children=[Html.freshElement("thead",{},headRows),Html.freshElement("tbody",{},bodyRows)]}return[Html.forceWrite].concat(children)}function convertTableRow(element,messages,options){var children=convertElements(element.children,messages,options);return[Html.freshElement("tr",{},[Html.forceWrite].concat(children))]}function convertTableCell(element,messages,options){var tagName=options.isTableHeader?"th":"td",children=convertElements(element.children,messages,options),attributes={};return 1!==element.colSpan&&(attributes.colspan=element.colSpan.toString()),1!==element.rowSpan&&(attributes.rowspan=element.rowSpan.toString()),[Html.freshElement(tagName,attributes,[Html.forceWrite].concat(children))]}function convertCommentReference(reference,messages,options){return findHtmlPath(reference,htmlPaths.ignore).wrap(function(){var comment=comments[reference.commentId],count=referencedComments.length+1,label="["+commentAuthorLabel(comment)+count+"]";return referencedComments.push({label:label,comment:comment}),[Html.freshElement("a",{href:"#"+referentHtmlId("comment",reference.commentId),id:referenceHtmlId("comment",reference.commentId)},[Html.text(label)])]})}function convertComment(referencedComment,messages,options){var label=referencedComment.label,comment=referencedComment.comment,body=convertElements(comment.body,messages,options).concat([Html.nonFreshElement("p",{},[Html.text(" "),Html.freshElement("a",{href:"#"+referenceHtmlId("comment",comment.commentId)},[Html.text("↑")])])]);return[Html.freshElement("dt",{id:referentHtmlId("comment",comment.commentId)},[Html.text("Comment "+label)]),Html.freshElement("dd",{},body)]}function convertBreak(element,messages,options){return htmlPathForBreak(element).wrap(function(){return[]})}function htmlPathForBreak(element){var style=findStyle(element);return style?style.to:"line"===element.breakType?htmlPaths.topLevelElement("br"):htmlPaths.empty}var noteNumber=1,noteReferences=[],referencedComments=[];options=_.extend({ignoreEmptyParagraphs:!0},options);var idPrefix=void 0===options.idPrefix?"":options.idPrefix,ignoreEmptyParagraphs=options.ignoreEmptyParagraphs,defaultParagraphStyle=htmlPaths.topLevelElement("p"),styleMap=options.styleMap||[],defaultTablePath=htmlPaths.elements([htmlPaths.element("table",{},{fresh:!0})]),elementConverters={document:function(document,messages,options){var children=convertElements(document.children,messages,options),notes=noteReferences.map(function(noteReference){return document.notes.resolve(noteReference)}),notesNodes=convertElements(notes,messages,options);return children.concat([Html.freshElement("ol",{},notesNodes),Html.freshElement("dl",{},flatMap(referencedComments,function(referencedComment){return convertComment(referencedComment,messages,options)}))])},paragraph:convertParagraph,run:convertRun,text:function(element,messages,options){return[Html.text(element.value)]},tab:function(element,messages,options){return[Html.text("	")]},hyperlink:function(element,messages,options){var href=element.anchor?"#"+htmlId(element.anchor):element.href,attributes={href:href};null!=element.targetFrame&&(attributes.target=element.targetFrame);var children=convertElements(element.children,messages,options);return[Html.nonFreshElement("a",attributes,children)]},bookmarkStart:function(element,messages,options){var anchor=Html.freshElement("a",{id:htmlId(element.name)},[Html.forceWrite]);return[anchor]},noteReference:function(element,messages,options){noteReferences.push(element);var anchor=Html.freshElement("a",{href:"#"+noteHtmlId(element),id:noteRefHtmlId(element)},[Html.text("["+noteNumber++ +"]")]);return[Html.freshElement("sup",{},[anchor])]},note:function(element,messages,options){var children=convertElements(element.body,messages,options),backLink=Html.elementWithTag(htmlPaths.element("p",{},{fresh:!1}),[Html.text(" "),Html.freshElement("a",{href:"#"+noteRefHtmlId(element)},[Html.text("↑")])]),body=children.concat([backLink]);return Html.freshElement("li",{id:noteHtmlId(element)},body)},commentReference:convertCommentReference,comment:convertComment,image:deferredConversion(recoveringConvertImage(options.convertImage||images.dataUri)),table:convertTable,tableRow:convertTableRow,tableCell:convertTableCell,"break":convertBreak};return{convertToHtml:convertToHtml}}function deferredConversion(func){return function(element,messages,options){return[{type:"deferred",id:deferredId++,value:function(){return func(element,messages,options)}}]}}function unrecognisedStyleWarning(type,element){return results.warning("Unrecognised "+type+" style: '"+element.styleName+"' (Style ID: "+element.styleId+")")}function flatMap(values,func){return _.flatten(values.map(func),!0)}function walkHtml(nodes,callback){nodes.forEach(function(node){callback(node),node.children&&walkHtml(node.children,callback)})}var _=require("underscore"),promises=require("./promises"),documents=require("./documents"),htmlPaths=require("./styles/html-paths"),results=require("./results"),images=require("./images"),Html=require("./html"),writers=require("./writers");exports.DocumentConverter=DocumentConverter;var deferredId=1,commentAuthorLabel=exports.commentAuthorLabel=function(comment){return comment.authorInitials||""}},{"./documents":4,"./html":18,"./images":20,"./promises":23,"./results":25,"./styles/html-paths":28,"./writers":33,underscore:103}],4:[function(require,module,exports){(function(Buffer){function Document(children,options){return options=options||{},{type:types.document,children:children,notes:options.notes||new Notes({}),comments:options.comments||[]}}function Paragraph(children,properties){properties=properties||{};var indent=properties.indent||{};return{type:types.paragraph,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null,numbering:properties.numbering||null,alignment:properties.alignment||null,indent:{start:indent.start||null,end:indent.end||null,firstLine:indent.firstLine||null,hanging:indent.hanging||null}}}function Run(children,properties){return properties=properties||{},{type:types.run,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null,isBold:!!properties.isBold,isUnderline:!!properties.isUnderline,isItalic:!!properties.isItalic,isStrikethrough:!!properties.isStrikethrough,isAllCaps:!!properties.isAllCaps,isSmallCaps:!!properties.isSmallCaps,verticalAlignment:properties.verticalAlignment||verticalAlignment.baseline,font:properties.font||null,fontSize:properties.fontSize||null}}function Text(value){return{type:types.text,value:value}}function Tab(){return{type:types.tab}}function Hyperlink(children,options){return{type:types.hyperlink,children:children,href:options.href,anchor:options.anchor,targetFrame:options.targetFrame}}function NoteReference(options){return{type:types.noteReference,noteType:options.noteType,noteId:options.noteId}}function Notes(notes){this._notes=_.indexBy(notes,function(note){return noteKey(note.noteType,note.noteId)})}function Note(options){return{type:types.note,noteType:options.noteType,noteId:options.noteId,body:options.body}}function commentReference(options){return{type:types.commentReference,commentId:options.commentId}}function comment(options){return{type:types.comment,commentId:options.commentId,body:options.body,authorName:options.authorName,authorInitials:options.authorInitials}}function noteKey(noteType,id){return noteType+"-"+id}function Image(options){return{type:types.image,read:function(encoding){return encoding?options.readImage(encoding):options.readImage().then(function(arrayBuffer){return Buffer.from(arrayBuffer)})},readAsArrayBuffer:function(){return options.readImage()},readAsBase64String:function(){return options.readImage("base64")},readAsBuffer:function(){return options.readImage().then(function(arrayBuffer){return Buffer.from(arrayBuffer)})},altText:options.altText,contentType:options.contentType}}function Table(children,properties){return properties=properties||{},{type:types.table,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null}}function TableRow(children,options){return options=options||{},{type:types.tableRow,children:children,isHeader:options.isHeader||!1}}function TableCell(children,options){return options=options||{},{type:types.tableCell,children:children,colSpan:null==options.colSpan?1:options.colSpan,rowSpan:null==options.rowSpan?1:options.rowSpan}}function Break(breakType){return{type:types["break"],breakType:breakType}}function BookmarkStart(options){return{type:types.bookmarkStart,name:options.name}}var _=require("underscore"),types=exports.types={document:"document",paragraph:"paragraph",run:"run",text:"text",tab:"tab",hyperlink:"hyperlink",noteReference:"noteReference",image:"image",note:"note",commentReference:"commentReference",comment:"comment",table:"table",tableRow:"tableRow",tableCell:"tableCell","break":"break",bookmarkStart:"bookmarkStart"},verticalAlignment={baseline:"baseline",superscript:"superscript",subscript:"subscript"};Notes.prototype.resolve=function(reference){return this.findNoteByKey(noteKey(reference.noteType,reference.noteId))},Notes.prototype.findNoteByKey=function(key){return this._notes[key]||null},exports.document=exports.Document=Document,exports.paragraph=exports.Paragraph=Paragraph,exports.run=exports.Run=Run,exports.text=exports.Text=Text,exports.tab=exports.Tab=Tab,exports.Hyperlink=Hyperlink,exports.noteReference=exports.NoteReference=NoteReference,exports.Notes=Notes,exports.Note=Note,exports.commentReference=commentReference,exports.comment=comment,exports.Image=Image,exports.Table=Table,exports.TableRow=TableRow,exports.TableCell=TableCell,exports.lineBreak=Break("line"),exports.pageBreak=Break("page"),exports.columnBreak=Break("column"),exports.BookmarkStart=BookmarkStart,exports.verticalAlignment=verticalAlignment}).call(this,require("buffer").Buffer)},{buffer:83,underscore:103}]},{},[3])()});
-    </script>
+    <!-- mammoth.js 用于Word文档解析 -->
+    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <!-- 内嵌pdf.js 用于PDF文档解析 -->
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script>
@@ -284,16 +289,27 @@
         </div>
 
         <div class="controls">
-            <button class="btn btn-primary" onclick="compareText()">开始对比</button>
-            <button class="btn btn-secondary" onclick="clearAll()">清空内容</button>
-            <button class="btn btn-secondary" onclick="swapText()">交换文本</button>
-            <div class="mode-selector">
-                <label>对比模式:</label>
-                <select id="diffMode">
-                    <option value="char">字符级对比</option>
-                    <option value="word">词语级对比</option>
-                    <option value="line">行级对比</option>
-                </select>
+            <div class="controls-left">
+                <button class="btn btn-primary" onclick="compareText()" data-lang="compare">开始对比</button>
+                <button class="btn btn-secondary" onclick="clearAll()" data-lang="clear">清空内容</button>
+                <button class="btn btn-secondary" onclick="swapText()" data-lang="swap">交换文本</button>
+                <div class="mode-selector">
+                    <label data-lang="diffMode">对比模式:</label>
+                    <select id="diffMode">
+                        <option value="char" data-lang="charMode">字符级对比</option>
+                        <option value="word" data-lang="wordMode">词语级对比</option>
+                        <option value="line" data-lang="lineMode">行级对比</option>
+                    </select>
+                </div>
+            </div>
+            <div class="controls-right">
+                <div class="mode-selector">
+                    <label data-lang="language">语言:</label>
+                    <select id="languageSelect" onchange="changeLanguage()">
+                        <option value="zh">中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -302,7 +318,7 @@
                 <h3>原始文本 <span class="old-tag">旧版本</span></h3>
                 <div class="file-upload">
                     <label for="oldFile">📁 上传文件</label>
-                    <input type="file" id="oldFile" accept=".txt,.docx,.pdf" onchange="loadFile('old')">
+                    <input type="file" id="oldFile" accept=".txt,.docx,.doc,.pdf,.md" onchange="loadFile('old')">
                     <span class="file-name" id="oldFileName">未选择文件</span>
                 </div>
                 <textarea id="oldText" placeholder="请粘贴或输入原始文本，或上传txt/word/pdf文件..."></textarea>
@@ -311,7 +327,7 @@
                 <h3>修改后文本 <span class="new-tag">新版本</span></h3>
                 <div class="file-upload">
                     <label for="newFile">📁 上传文件</label>
-                    <input type="file" id="newFile" accept=".txt,.docx,.pdf" onchange="loadFile('new')">
+                    <input type="file" id="newFile" accept=".txt,.docx,.doc,.pdf,.md" onchange="loadFile('new')">
                     <span class="file-name" id="newFileName">未选择文件</span>
                 </div>
                 <textarea id="newText" placeholder="请粘贴或输入修改后的文本，或上传txt/word/pdf文件..."></textarea>
@@ -681,41 +697,190 @@
         };
 
         var dmp = new DiffMatchPatch();
+        
+        // 多语言字典
+        const translations = {
+            zh: {
+                title: "🔍 本地文本对比工具",
+                subtitle: "完全本地运行 | 100%隐私保护 | 无任何网络请求",
+                privacyBadge: "✅ 所有数据仅在您的浏览器本地处理，不会上传到任何服务器",
+                originalText: "原始文本 <span class=\"old-tag\">旧版本</span>",
+                modifiedText: "修改后文本 <span class=\"new-tag\">新版本</span>",
+                uploadFile: "📁 上传文件",
+                oldPlaceholder: "请粘贴或输入原始文本，或上传txt/word/pdf文件...",
+                newPlaceholder: "请粘贴或输入修改后的文本，或上传txt/word/pdf文件...",
+                resultTitle: "对比结果",
+                resultPlaceholder: "请输入文本后点击\"开始对比\"按钮查看差异",
+                addText: "新增内容:",
+                removeText: "删除内容:",
+                modifyText: "修改内容:",
+                unit: "处",
+                compare: "开始对比",
+                clear: "清空内容",
+                swap: "交换文本",
+                diffMode: "对比模式:",
+                charMode: "字符级对比",
+                wordMode: "词语级对比",
+                lineMode: "行级对比",
+                language: "语言:",
+                noContentError: "请先输入文本内容",
+                docxTimeout: "文档解析时间较长，是否继续等待？\n大文件解析可能需要更长时间",
+                docxError: "Word文档解析失败: {error}\n建议检查文件是否损坏，或尝试另存为docx格式后重试",
+                docNotSupport: "旧版.doc文件暂不支持纯前端解析，请先将文件另存为.docx格式后再上传，感谢理解！",
+                pdfError: "PDF文档解析失败: {error}",
+                loadCanceled: "加载已取消",
+                loadFailed: "加载失败",
+                unsupportedFormat: "不支持的格式",
+                fileLoaded: " 已加载",
+                fileLoading: " 加载中..."
+            },
+            en: {
+                title: "🔍 Local Text Comparison Tool",
+                subtitle: "100% Local Processing | Privacy First | No Network Requests",
+                privacyBadge: "✅ All data processed locally in your browser, never uploaded to any server",
+                originalText: "Original Text <span class=\"old-tag\">Old</span>",
+                modifiedText: "Modified Text <span class=\"new-tag\">New</span>",
+                uploadFile: "📁 Upload File",
+                oldPlaceholder: "Paste or enter original text, or upload txt/word/pdf files...",
+                newPlaceholder: "Paste or enter modified text, or upload txt/word/pdf files...",
+                resultTitle: "Comparison Result",
+                resultPlaceholder: "Enter text and click \"Compare\" button to see differences",
+                addText: "Added:",
+                removeText: "Removed:",
+                modifyText: "Modified:",
+                unit: "changes",
+                compare: "Compare",
+                clear: "Clear All",
+                swap: "Swap Text",
+                diffMode: "Comparison Mode:",
+                charMode: "Character Level",
+                wordMode: "Word Level",
+                lineMode: "Line Level",
+                language: "Language:",
+                noContentError: "Please enter text content first",
+                docxTimeout: "Document parsing is taking longer than expected. Continue waiting?\nLarge files may take more time.",
+                docxError: "Word document parsing failed: {error}\nPlease check if the file is corrupted, or try saving as .docx format and retry.",
+                docNotSupport: "Legacy .doc files are not supported in browser. Please save as .docx format first, thank you!",
+                pdfError: "PDF document parsing failed: {error}",
+                loadCanceled: "Load canceled",
+                loadFailed: "Load failed",
+                unsupportedFormat: "Unsupported format",
+                fileLoaded: " loaded",
+                fileLoading: " loading..."
+            }
+        };
+
+        let currentLang = 'zh';
+
+        function changeLanguage() {
+            currentLang = document.getElementById('languageSelect').value;
+            updatePageLanguage();
+        }
+
+        function updatePageLanguage() {
+            const t = translations[currentLang];
+            
+            // 更新页面标题
+            document.title = currentLang === 'zh' ? '本地文本对比工具 - 100%隐私保护' : 'Local Text Diff Tool - 100% Privacy';
+            
+            // 更新头部
+            document.querySelector('.header h1').innerHTML = t.title;
+            document.querySelector('.header p').textContent = t.subtitle;
+            document.querySelector('.privacy-badge').textContent = t.privacyBadge;
+            
+            // 更新输入区域标题
+            document.querySelectorAll('.input-box h3')[0].innerHTML = t.originalText;
+            document.querySelectorAll('.input-box h3')[1].innerHTML = t.modifiedText;
+            
+            // 更新上传按钮文本
+            document.querySelectorAll('.file-upload label')[0].textContent = t.uploadFile;
+            document.querySelectorAll('.file-upload label')[1].textContent = t.uploadFile;
+            
+            // 更新占位符
+            document.getElementById('oldText').placeholder = t.oldPlaceholder;
+            document.getElementById('newText').placeholder = t.newPlaceholder;
+            
+            // 更新结果区域
+            document.querySelector('.result-section h3').textContent = t.resultTitle;
+            if (document.getElementById('diffResult').textContent.includes('请输入文本') || document.getElementById('diffResult').textContent.includes('Enter text')) {
+                document.getElementById('diffResult').innerHTML = t.resultPlaceholder;
+            }
+            
+            // 更新统计标签
+            const statItems = document.querySelectorAll('.stat-item span');
+            if (statItems.length >= 3) {
+                statItems[0].textContent = t.addText;
+                statItems[2].textContent = t.removeText;
+                statItems[4].textContent = t.modifyText;
+            }
+            
+            // 更新所有带data-lang属性的元素
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (t[key]) {
+                    if (el.tagName === 'OPTION') {
+                        el.textContent = t[key];
+                    } else if (el.tagName === 'LABEL') {
+                        el.textContent = t[key];
+                    } else if (el.tagName === 'BUTTON') {
+                        el.textContent = t[key];
+                    }
+                }
+            });
+        }
 
         function loadFile(type) {
+            const t = translations[currentLang];
             var fileInput = document.getElementById(type + 'File');
             var fileNameEl = document.getElementById(type + 'FileName');
             var textarea = document.getElementById(type + 'Text');
             
             if (fileInput.files.length === 0) {
-                fileNameEl.textContent = '未选择文件';
+                fileNameEl.textContent = currentLang === 'zh' ? '未选择文件' : 'No file selected';
                 return;
             }
             
             var file = fileInput.files[0];
-            fileNameEl.textContent = file.name + ' 加载中... <span class="loading"></span>';
+            fileNameEl.innerHTML = file.name + t.fileLoading + ' <span class="loading"></span>';
             
             var reader = new FileReader();
             
-            if (file.name.endsWith('.txt')) {
+            if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
                 reader.onload = function(e) {
                     textarea.value = e.target.result;
-                    fileNameEl.textContent = file.name + ' 已加载';
+                    fileNameEl.textContent = file.name + t.fileLoaded;
                 };
                 reader.readAsText(file, 'UTF-8');
             } else if (file.name.endsWith('.docx')) {
                 reader.onload = function(e) {
+                    // 增加超时机制，防止解析卡住
+                    var timeout = setTimeout(function() {
+                        if (confirm(t.docxTimeout)) {
+                            // 用户确认继续等待
+                        } else {
+                            fileNameEl.textContent = t.loadCanceled;
+                            return;
+                        }
+                    }, 5000);
+                    
                     mammoth.extractRawText({arrayBuffer: e.target.result})
                         .then(function(result) {
+                            clearTimeout(timeout);
                             textarea.value = result.value;
-                            fileNameEl.textContent = file.name + ' 已加载';
+                            fileNameEl.textContent = file.name + t.fileLoaded;
                         })
                         .catch(function(err) {
-                            alert('Word文档解析失败: ' + err);
-                            fileNameEl.textContent = '加载失败';
+                            clearTimeout(timeout);
+                            console.error('DOCX parsing error:', err);
+                            alert(t.docxError.replace('{error}', err.message));
+                            fileNameEl.textContent = t.loadFailed;
                         });
                 };
                 reader.readAsArrayBuffer(file);
+            } else if (file.name.endsWith('.doc')) {
+                alert(t.docNotSupport);
+                fileNameEl.textContent = t.unsupportedFormat;
+                fileInput.value = '';
             } else if (file.name.endsWith('.pdf')) {
                 reader.onload = function(e) {
                     var typedArray = new Uint8Array(e.target.result);
@@ -734,11 +899,12 @@
                         }
                         Promise.all(countPromises).then(function(texts) {
                             textarea.value = texts.join('\n\n');
-                            fileNameEl.textContent = file.name + ' 已加载';
+                            fileNameEl.textContent = file.name + t.fileLoaded;
                         });
                     }).catch(function(err) {
-                        alert('PDF文档解析失败: ' + err);
-                        fileNameEl.textContent = '加载失败';
+                        console.error('PDF parsing error:', err);
+                        alert(t.pdfError.replace('{error}', err.message));
+                        fileNameEl.textContent = t.loadFailed;
                     });
                 };
                 reader.readAsArrayBuffer(file);
@@ -746,12 +912,13 @@
         }
 
         function compareText() {
+            const t = translations[currentLang];
             var oldText = document.getElementById('oldText').value;
             var newText = document.getElementById('newText').value;
             var mode = document.getElementById('diffMode').value;
 
             if (!oldText && !newText) {
-                alert('请先输入文本内容');
+                alert(t.noContentError);
                 return;
             }
 
@@ -805,6 +972,24 @@
                 compareText();
             }
         });
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从本地存储读取上次使用的语言
+            const savedLang = localStorage.getItem('textDiffLang');
+            if (savedLang && translations[savedLang]) {
+                currentLang = savedLang;
+                document.getElementById('languageSelect').value = savedLang;
+                updatePageLanguage();
+            }
+        });
+
+        // 保存语言选择到本地存储
+        function changeLanguage() {
+            currentLang = document.getElementById('languageSelect').value;
+            localStorage.setItem('textDiffLang', currentLang);
+            updatePageLanguage();
+        }
     </script>
 </body>
 </html>
