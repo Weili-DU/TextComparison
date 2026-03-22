@@ -1,0 +1,11 @@
+# 忽略更新计划文档
+UPDATE_PLAN.md
+
+# 忽略测试数据文件夹
+TestDatas/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+*.tmp
+*.log

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地文本对比工具 - 100%隐私保护</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+        .privacy-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .mode-selector label {
+            font-weight: 600;
+            color: #333;
+        }
+        .mode-selector select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+        .mode-selector select:focus {
+            border-color: #667eea;
+        }
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .input-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .input-box h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .input-box h3 .old-tag {
+            background: #ff4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .input-box h3 .new-tag {
+            background: #00C851;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        textarea:focus {
+            border-color: #667eea;
+        }
+        .result-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .result-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .diff-result {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .diff-add {
+            background-color: #e6f9e6;
+            color: #006600;
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-decoration: none;
+        }
+        .diff-remove {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 2px 4px;
+            border-radius: 3px;
+            text-decoration: line-through;
+        }
+        .diff-modify {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            display: flex;
+            gap: 30px;
+            font-size: 0.95rem;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stat-item .add-count {
+            color: #00C851;
+            font-weight: 700;
+        }
+        .stat-item .remove-count {
+            color: #ff4444;
+            font-weight: 700;
+        }
+        .stat-item .modify-count {
+            color: #ff8800;
+            font-weight: 700;
+        }
+        .file-upload {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .file-upload label {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        .file-upload label:hover {
+            background: #5568d3;
+        }
+        .file-upload input[type="file"] {
+            display: none;
+        }
+        .file-name {
+            font-size: 0.85rem;
+            color: #666;
+            font-weight: 500;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+    <!-- 内嵌mammoth.js 用于Word文档解析 -->
+    <script>
+!function(f){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=f();else if("function"==typeof define&&define.amd)define([],f);else{var g;g="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this,g.mammoth=f()}}(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a="function"==typeof require&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}for(var i="function"==typeof require&&require,o=0;o<r.length;o++)s(r[o]);return s}({1:[function(require,module,exports){function Files(){function read(uri){return promises.reject(new Error("could not open external image: '"+uri+"'\ncannot open linked files from a web browser"))}return{read:read}}var promises=require("../../lib/promises");exports.Files=Files},{"../../lib/promises":23}],2:[function(require,module,exports){function openZip(options){return options.arrayBuffer?promises.resolve(zipfile.openArrayBuffer(options.arrayBuffer)):promises.reject(new Error("Could not find file in options"))}var promises=require("../lib/promises"),zipfile=require("../lib/zipfile");exports.openZip=openZip},{"../lib/promises":23,"../lib/zipfile":40}],3:[function(require,module,exports){function DocumentConverter(options){return{convertToHtml:function(element){var comments=_.indexBy(element.type===documents.types.document?element.comments:[],"commentId"),conversion=new DocumentConversion(options,comments);return conversion.convertToHtml(element)}}}function DocumentConversion(options,comments){function convertToHtml(document){var messages=[],html=elementToHtml(document,messages,{}),deferredNodes=[];walkHtml(html,function(node){"deferred"===node.type&&deferredNodes.push(node)});var deferredValues={};return promises.mapSeries(deferredNodes,function(deferred){return deferred.value().then(function(value){deferredValues[deferred.id]=value})}).then(function(){function replaceDeferred(nodes){return flatMap(nodes,function(node){return"deferred"===node.type?deferredValues[deferred.id]:node.children?[_.extend({},node,{children:replaceDeferred(node.children)})]:[node]})}var writer=writers.writer({prettyPrint:options.prettyPrint,outputFormat:options.outputFormat});return Html.write(writer,Html.simplify(replaceDeferred(html))),new results.Result(writer.asString(),messages)})}function convertElements(elements,messages,options){return flatMap(elements,messages,options)}function elementToHtml(element,messages,options){if(!options)throw new Error("options not set");var handler=elementConverters[element.type];return handler?handler(element,messages,options):[]}function convertParagraph(element,messages,options){return htmlPathForParagraph(element,messages).wrap(function(){var content=convertElements(element.children,messages,options);return ignoreEmptyParagraphs?content:[Html.forceWrite].concat(content)})}function htmlPathForParagraph(element,messages){var style=findStyle(element);return style?style.to:(element.styleId&&messages.push(unrecognisedStyleWarning("paragraph",element)),defaultParagraphStyle)}function convertRun(run,messages,options){var nodes=function(){return convertElements(run.children,messages,options)},paths=[];run.isSmallCaps&&paths.push(findHtmlPathForRunProperty("smallCaps")),run.isAllCaps&&paths.push(findHtmlPathForRunProperty("allCaps")),run.isStrikethrough&&paths.push(findHtmlPathForRunProperty("strikethrough","s")),run.isUnderline&&paths.push(findHtmlPathForRunProperty("underline")),run.verticalAlignment===documents.verticalAlignment.subscript&&paths.push(htmlPaths.element("sub",{},{fresh:!1})),run.verticalAlignment===documents.verticalAlignment.superscript&&paths.push(htmlPaths.element("sup",{},{fresh:!1})),run.isItalic&&paths.push(findHtmlPathForRunProperty("italic","em")),run.isBold&&paths.push(findHtmlPathForRunProperty("bold","strong"));var stylePath=htmlPaths.empty,style=findStyle(run);return style?stylePath=style.to:run.styleId&&messages.push(unrecognisedStyleWarning("run",run)),paths.push(stylePath),paths.forEach(function(path){nodes=path.wrap.bind(path,nodes)}),nodes()}function findHtmlPathForRunProperty(elementType,defaultTagName){var path=findHtmlPath({type:elementType});return path?path:defaultTagName?htmlPaths.element(defaultTagName,{},{fresh:!1}):htmlPaths.empty}function findHtmlPath(element,defaultPath){var style=findStyle(element);return style?style.to:defaultPath}function findStyle(element){for(var i=0;i<styleMap.length;i++)if(styleMap[i].from.matches(element))return styleMap[i]}function recoveringConvertImage(convertImage){return function(image,messages){return promises.attempt(function(){return convertImage(image,messages)}).caught(function(error){return messages.push(results.error(error)),[]})}}function noteHtmlId(note){return referentHtmlId(note.noteType,note.noteId)}function noteRefHtmlId(note){return referenceHtmlId(note.noteType,note.noteId)}function referentHtmlId(referenceType,referenceId){return htmlId(referenceType+"-"+referenceId)}function referenceHtmlId(referenceType,referenceId){return htmlId(referenceType+"-ref-"+referenceId)}function htmlId(suffix){return idPrefix+suffix}function convertTable(element,messages,options){return findHtmlPath(element,defaultTablePath).wrap(function(){return convertTableChildren(element,messages,options)})}function convertTableChildren(element,messages,options){var bodyIndex=_.findIndex(element.children,function(child){return!child.type===documents.types.tableRow||!child.isHeader});-1===bodyIndex&&(bodyIndex=element.children.length);var children;if(0===bodyIndex)children=convertElements(element.children,messages,_.extend({},options,{isTableHeader:!1}));else{var headRows=convertElements(element.children.slice(0,bodyIndex),messages,_.extend({},options,{isTableHeader:!0})),bodyRows=convertElements(element.children.slice(bodyIndex),messages,_.extend({},options,{isTableHeader:!1}));children=[Html.freshElement("thead",{},headRows),Html.freshElement("tbody",{},bodyRows)]}return[Html.forceWrite].concat(children)}function convertTableRow(element,messages,options){var children=convertElements(element.children,messages,options);return[Html.freshElement("tr",{},[Html.forceWrite].concat(children))]}function convertTableCell(element,messages,options){var tagName=options.isTableHeader?"th":"td",children=convertElements(element.children,messages,options),attributes={};return 1!==element.colSpan&&(attributes.colspan=element.colSpan.toString()),1!==element.rowSpan&&(attributes.rowspan=element.rowSpan.toString()),[Html.freshElement(tagName,attributes,[Html.forceWrite].concat(children))]}function convertCommentReference(reference,messages,options){return findHtmlPath(reference,htmlPaths.ignore).wrap(function(){var comment=comments[reference.commentId],count=referencedComments.length+1,label="["+commentAuthorLabel(comment)+count+"]";return referencedComments.push({label:label,comment:comment}),[Html.freshElement("a",{href:"#"+referentHtmlId("comment",reference.commentId),id:referenceHtmlId("comment",reference.commentId)},[Html.text(label)])]})}function convertComment(referencedComment,messages,options){var label=referencedComment.label,comment=referencedComment.comment,body=convertElements(comment.body,messages,options).concat([Html.nonFreshElement("p",{},[Html.text(" "),Html.freshElement("a",{href:"#"+referenceHtmlId("comment",comment.commentId)},[Html.text("↑")])])]);return[Html.freshElement("dt",{id:referentHtmlId("comment",comment.commentId)},[Html.text("Comment "+label)]),Html.freshElement("dd",{},body)]}function convertBreak(element,messages,options){return htmlPathForBreak(element).wrap(function(){return[]})}function htmlPathForBreak(element){var style=findStyle(element);return style?style.to:"line"===element.breakType?htmlPaths.topLevelElement("br"):htmlPaths.empty}var noteNumber=1,noteReferences=[],referencedComments=[];options=_.extend({ignoreEmptyParagraphs:!0},options);var idPrefix=void 0===options.idPrefix?"":options.idPrefix,ignoreEmptyParagraphs=options.ignoreEmptyParagraphs,defaultParagraphStyle=htmlPaths.topLevelElement("p"),styleMap=options.styleMap||[],defaultTablePath=htmlPaths.elements([htmlPaths.element("table",{},{fresh:!0})]),elementConverters={document:function(document,messages,options){var children=convertElements(document.children,messages,options),notes=noteReferences.map(function(noteReference){return document.notes.resolve(noteReference)}),notesNodes=convertElements(notes,messages,options);return children.concat([Html.freshElement("ol",{},notesNodes),Html.freshElement("dl",{},flatMap(referencedComments,function(referencedComment){return convertComment(referencedComment,messages,options)}))])},paragraph:convertParagraph,run:convertRun,text:function(element,messages,options){return[Html.text(element.value)]},tab:function(element,messages,options){return[Html.text("	")]},hyperlink:function(element,messages,options){var href=element.anchor?"#"+htmlId(element.anchor):element.href,attributes={href:href};null!=element.targetFrame&&(attributes.target=element.targetFrame);var children=convertElements(element.children,messages,options);return[Html.nonFreshElement("a",attributes,children)]},bookmarkStart:function(element,messages,options){var anchor=Html.freshElement("a",{id:htmlId(element.name)},[Html.forceWrite]);return[anchor]},noteReference:function(element,messages,options){noteReferences.push(element);var anchor=Html.freshElement("a",{href:"#"+noteHtmlId(element),id:noteRefHtmlId(element)},[Html.text("["+noteNumber++ +"]")]);return[Html.freshElement("sup",{},[anchor])]},note:function(element,messages,options){var children=convertElements(element.body,messages,options),backLink=Html.elementWithTag(htmlPaths.element("p",{},{fresh:!1}),[Html.text(" "),Html.freshElement("a",{href:"#"+noteRefHtmlId(element)},[Html.text("↑")])]),body=children.concat([backLink]);return Html.freshElement("li",{id:noteHtmlId(element)},body)},commentReference:convertCommentReference,comment:convertComment,image:deferredConversion(recoveringConvertImage(options.convertImage||images.dataUri)),table:convertTable,tableRow:convertTableRow,tableCell:convertTableCell,"break":convertBreak};return{convertToHtml:convertToHtml}}function deferredConversion(func){return function(element,messages,options){return[{type:"deferred",id:deferredId++,value:function(){return func(element,messages,options)}}]}}function unrecognisedStyleWarning(type,element){return results.warning("Unrecognised "+type+" style: '"+element.styleName+"' (Style ID: "+element.styleId+")")}function flatMap(values,func){return _.flatten(values.map(func),!0)}function walkHtml(nodes,callback){nodes.forEach(function(node){callback(node),node.children&&walkHtml(node.children,callback)})}var _=require("underscore"),promises=require("./promises"),documents=require("./documents"),htmlPaths=require("./styles/html-paths"),results=require("./results"),images=require("./images"),Html=require("./html"),writers=require("./writers");exports.DocumentConverter=DocumentConverter;var deferredId=1,commentAuthorLabel=exports.commentAuthorLabel=function(comment){return comment.authorInitials||""}},{"./documents":4,"./html":18,"./images":20,"./promises":23,"./results":25,"./styles/html-paths":28,"./writers":33,underscore:103}],4:[function(require,module,exports){(function(Buffer){function Document(children,options){return options=options||{},{type:types.document,children:children,notes:options.notes||new Notes({}),comments:options.comments||[]}}function Paragraph(children,properties){properties=properties||{};var indent=properties.indent||{};return{type:types.paragraph,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null,numbering:properties.numbering||null,alignment:properties.alignment||null,indent:{start:indent.start||null,end:indent.end||null,firstLine:indent.firstLine||null,hanging:indent.hanging||null}}}function Run(children,properties){return properties=properties||{},{type:types.run,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null,isBold:!!properties.isBold,isUnderline:!!properties.isUnderline,isItalic:!!properties.isItalic,isStrikethrough:!!properties.isStrikethrough,isAllCaps:!!properties.isAllCaps,isSmallCaps:!!properties.isSmallCaps,verticalAlignment:properties.verticalAlignment||verticalAlignment.baseline,font:properties.font||null,fontSize:properties.fontSize||null}}function Text(value){return{type:types.text,value:value}}function Tab(){return{type:types.tab}}function Hyperlink(children,options){return{type:types.hyperlink,children:children,href:options.href,anchor:options.anchor,targetFrame:options.targetFrame}}function NoteReference(options){return{type:types.noteReference,noteType:options.noteType,noteId:options.noteId}}function Notes(notes){this._notes=_.indexBy(notes,function(note){return noteKey(note.noteType,note.noteId)})}function Note(options){return{type:types.note,noteType:options.noteType,noteId:options.noteId,body:options.body}}function commentReference(options){return{type:types.commentReference,commentId:options.commentId}}function comment(options){return{type:types.comment,commentId:options.commentId,body:options.body,authorName:options.authorName,authorInitials:options.authorInitials}}function noteKey(noteType,id){return noteType+"-"+id}function Image(options){return{type:types.image,read:function(encoding){return encoding?options.readImage(encoding):options.readImage().then(function(arrayBuffer){return Buffer.from(arrayBuffer)})},readAsArrayBuffer:function(){return options.readImage()},readAsBase64String:function(){return options.readImage("base64")},readAsBuffer:function(){return options.readImage().then(function(arrayBuffer){return Buffer.from(arrayBuffer)})},altText:options.altText,contentType:options.contentType}}function Table(children,properties){return properties=properties||{},{type:types.table,children:children,styleId:properties.styleId||null,styleName:properties.styleName||null}}function TableRow(children,options){return options=options||{},{type:types.tableRow,children:children,isHeader:options.isHeader||!1}}function TableCell(children,options){return options=options||{},{type:types.tableCell,children:children,colSpan:null==options.colSpan?1:options.colSpan,rowSpan:null==options.rowSpan?1:options.rowSpan}}function Break(breakType){return{type:types["break"],breakType:breakType}}function BookmarkStart(options){return{type:types.bookmarkStart,name:options.name}}var _=require("underscore"),types=exports.types={document:"document",paragraph:"paragraph",run:"run",text:"text",tab:"tab",hyperlink:"hyperlink",noteReference:"noteReference",image:"image",note:"note",commentReference:"commentReference",comment:"comment",table:"table",tableRow:"tableRow",tableCell:"tableCell","break":"break",bookmarkStart:"bookmarkStart"},verticalAlignment={baseline:"baseline",superscript:"superscript",subscript:"subscript"};Notes.prototype.resolve=function(reference){return this.findNoteByKey(noteKey(reference.noteType,reference.noteId))},Notes.prototype.findNoteByKey=function(key){return this._notes[key]||null},exports.document=exports.Document=Document,exports.paragraph=exports.Paragraph=Paragraph,exports.run=exports.Run=Run,exports.text=exports.Text=Text,exports.tab=exports.Tab=Tab,exports.Hyperlink=Hyperlink,exports.noteReference=exports.NoteReference=NoteReference,exports.Notes=Notes,exports.Note=Note,exports.commentReference=commentReference,exports.comment=comment,exports.Image=Image,exports.Table=Table,exports.TableRow=TableRow,exports.TableCell=TableCell,exports.lineBreak=Break("line"),exports.pageBreak=Break("page"),exports.columnBreak=Break("column"),exports.BookmarkStart=BookmarkStart,exports.verticalAlignment=verticalAlignment}).call(this,require("buffer").Buffer)},{buffer:83,underscore:103}]},{},[3])()});
+    </script>
+    <!-- 内嵌pdf.js 用于PDF文档解析 -->
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 本地文本对比工具</h1>
+            <p>完全本地运行 | 100%隐私保护 | 无任何网络请求</p>
+            <div class="privacy-badge">✅ 所有数据仅在您的浏览器本地处理，不会上传到任何服务器</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="compareText()">开始对比</button>
+            <button class="btn btn-secondary" onclick="clearAll()">清空内容</button>
+            <button class="btn btn-secondary" onclick="swapText()">交换文本</button>
+            <div class="mode-selector">
+                <label>对比模式:</label>
+                <select id="diffMode">
+                    <option value="char">字符级对比</option>
+                    <option value="word">词语级对比</option>
+                    <option value="line">行级对比</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-box">
+                <h3>原始文本 <span class="old-tag">旧版本</span></h3>
+                <div class="file-upload">
+                    <label for="oldFile">📁 上传文件</label>
+                    <input type="file" id="oldFile" accept=".txt,.docx,.pdf" onchange="loadFile('old')">
+                    <span class="file-name" id="oldFileName">未选择文件</span>
+                </div>
+                <textarea id="oldText" placeholder="请粘贴或输入原始文本，或上传txt/word/pdf文件..."></textarea>
+            </div>
+            <div class="input-box">
+                <h3>修改后文本 <span class="new-tag">新版本</span></h3>
+                <div class="file-upload">
+                    <label for="newFile">📁 上传文件</label>
+                    <input type="file" id="newFile" accept=".txt,.docx,.pdf" onchange="loadFile('new')">
+                    <span class="file-name" id="newFileName">未选择文件</span>
+                </div>
+                <textarea id="newText" placeholder="请粘贴或输入修改后的文本，或上传txt/word/pdf文件..."></textarea>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <h3>对比结果</h3>
+            <div class="diff-result" id="diffResult">
+                请输入文本后点击"开始对比"按钮查看差异
+            </div>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-item">
+                    <span>新增内容:</span>
+                    <span class="add-count" id="addCount">0</span> 处
+                </div>
+                <div class="stat-item">
+                    <span>删除内容:</span>
+                    <span class="remove-count" id="removeCount">0</span> 处
+                </div>
+                <div class="stat-item">
+                    <span>修改内容:</span>
+                    <span class="modify-count" id="modifyCount">0</span> 处
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Diff Match Patch 算法核心实现 - 完全内嵌，无外部依赖
+        function DiffMatchPatch() {
+            this.DiffDelete = -1;
+            this.DiffInsert = 1;
+            this.DiffEqual = 0;
+        }
+
+        DiffMatchPatch.prototype.diff_main = function(text1, text2, checklines) {
+            if (text1 === text2) {
+                return text1 ? [[this.DiffEqual, text1]] : [];
+            }
+
+            var commonlength = this.diff_commonPrefix(text1, text2);
+            var commonprefix = text1.substring(0, commonlength);
+            text1 = text1.substring(commonlength);
+            text2 = text2.substring(commonlength);
+
+            commonlength = this.diff_commonSuffix(text1, text2);
+            var commonsuffix = text1.substring(text1.length - commonlength);
+            text1 = text1.substring(0, text1.length - commonlength);
+            text2 = text2.substring(0, text2.length - commonlength);
+
+            var diffs = [];
+            if (commonprefix) {
+                diffs.push([this.DiffEqual, commonprefix]);
+            }
+
+            var subDiffs = this.diff_compute(text1, text2, checklines !== false);
+            diffs = diffs.concat(subDiffs);
+
+            if (commonsuffix) {
+                diffs.push([this.DiffEqual, commonsuffix]);
+            }
+
+            this.diff_cleanupMerge(diffs);
+            return diffs;
+        };
+
+        DiffMatchPatch.prototype.diff_commonPrefix = function(text1, text2) {
+            var pointermax = Math.min(text1.length, text2.length);
+            var pointermin = 0;
+            var pointermid = pointermax;
+            var pointerstart = 0;
+            while (pointermin < pointermid) {
+                if (text1.substring(pointerstart, pointermid) == text2.substring(pointerstart, pointermid)) {
+                    pointermin = pointermid;
+                    pointerstart = pointermin;
+                } else {
+                    pointermax = pointermid;
+                }
+                pointermid = Math.floor((pointermax - pointermin) / 2 + pointermin);
+            }
+            return pointermid;
+        };
+
+        DiffMatchPatch.prototype.diff_commonSuffix = function(text1, text2) {
+            var pointermax = Math.min(text1.length, text2.length);
+            var pointermin = 0;
+            var pointermid = pointermax;
+            var pointerend = 0;
+            while (pointermin < pointermid) {
+                if (text1.substring(text1.length - pointermid, text1.length - pointerend) == text2.substring(text2.length - pointermid, text2.length - pointerend)) {
+                    pointermin = pointermid;
+                    pointerend = pointermin;
+                } else {
+                    pointermax = pointermid;
+                }
+                pointermid = Math.floor((pointermax - pointermin) / 2 + pointermin);
+            }
+            return pointermid;
+        };
+
+        DiffMatchPatch.prototype.diff_compute = function(text1, text2, checklines) {
+            if (!text1) {
+                return [[this.DiffInsert, text2]];
+            }
+            if (!text2) {
+                return [[this.DiffDelete, text1]];
+            }
+
+            var longtext = text1.length > text2.length ? text1 : text2;
+            var shorttext = text1.length > text2.length ? text2 : text1;
+            var i = longtext.indexOf(shorttext);
+            if (i != -1) {
+                if (text1.length > text2.length) {
+                    return [
+                        [this.DiffDelete, longtext.substring(0, i)],
+                        [this.DiffEqual, shorttext],
+                        [this.DiffDelete, longtext.substring(i + shorttext.length)]
+                    ];
+                } else {
+                    return [
+                        [this.DiffInsert, longtext.substring(0, i)],
+                        [this.DiffEqual, shorttext],
+                        [this.DiffInsert, longtext.substring(i + shorttext.length)]
+                    ];
+                }
+            }
+
+            if (shorttext.length == 1) {
+                return [[this.DiffDelete, text1], [this.DiffInsert, text2]];
+            }
+
+            var hm = this.diff_halfMatch(text1, text2);
+            if (hm) {
+                var text1_a = hm[0];
+                var text1_b = hm[1];
+                var text2_a = hm[2];
+                var text2_b = hm[3];
+                var mid_common = hm[4];
+                var diffs_a = this.diff_main(text1_a, text2_a, checklines);
+                var diffs_b = this.diff_main(text1_b, text2_b, checklines);
+                return diffs_a.concat([[this.DiffEqual, mid_common]], diffs_b);
+            }
+
+            return this.diff_lineMode(text1, text2);
+        };
+
+        DiffMatchPatch.prototype.diff_halfMatch = function(text1, text2) {
+            var longtext = text1.length > text2.length ? text1 : text2;
+            var shorttext = text1.length > text2.length ? text2 : text1;
+            if (longtext.length < 4 || shorttext.length * 2 < longtext.length) {
+                return null;
+            }
+
+            function diff_halfMatchI(longtext, shorttext, i) {
+                var seed = shorttext.substring(i, i + Math.floor(shorttext.length / 4));
+                var j = -1;
+                var best_common = '';
+                var best_longtext_a, best_longtext_b, best_shorttext_a, best_shorttext_b;
+                while ((j = longtext.indexOf(seed, j + 1)) != -1) {
+                    var prefixLength = dmp.diff_commonPrefix(shorttext.substring(i), longtext.substring(j));
+                    var suffixLength = dmp.diff_commonSuffix(shorttext.substring(0, i), longtext.substring(0, j));
+                    if (best_common.length < suffixLength + prefixLength) {
+                        best_common = shorttext.substring(i - suffixLength, i + prefixLength);
+                        best_longtext_a = longtext.substring(0, j - suffixLength);
+                        best_longtext_b = longtext.substring(j + prefixLength);
+                        best_shorttext_a = shorttext.substring(0, i - suffixLength);
+                        best_shorttext_b = shorttext.substring(i + prefixLength);
+                    }
+                }
+                if (best_common.length * 2 >= shorttext.length) {
+                    return [best_longtext_a, best_longtext_b, best_shorttext_a, best_shorttext_b, best_common];
+                } else {
+                    return null;
+                }
+            }
+
+            var dmp = this;
+            var hm1 = diff_halfMatchI(longtext, shorttext, Math.ceil(shorttext.length / 4));
+            var hm2 = diff_halfMatchI(longtext, shorttext, Math.ceil(shorttext.length / 2));
+            if (!hm1 && !hm2) {
+                return null;
+            } else if (!hm2) {
+                var hm = hm1;
+            } else if (!hm1) {
+                var hm = hm2;
+            } else {
+                var hm = (hm1[4].length > hm2[4].length) ? hm1 : hm2;
+            }
+
+            var text1_a, text1_b, text2_a, text2_b;
+            if (text1.length > text2.length) {
+                text1_a = hm[0];
+                text1_b = hm[1];
+                text2_a = hm[2];
+                text2_b = hm[3];
+            } else {
+                text2_a = hm[0];
+                text2_b = hm[1];
+                text1_a = hm[2];
+                text1_b = hm[3];
+            }
+            return [text1_a, text1_b, text2_a, text2_b, hm[4]];
+        };
+
+        DiffMatchPatch.prototype.diff_lineMode = function(text1, text2) {
+            var a = this.diff_linesToChars(text1, text2);
+            var lineText1 = a.chars1;
+            var lineText2 = a.chars2;
+            var lineArray = a.lineArray;
+            var diffs = this.diff_main(lineText1, lineText2, false);
+            this.diff_charsToLines(diffs, lineArray);
+
+            var diffs2 = [];
+            for (var x = 0; x < diffs.length; x++) {
+                if (diffs[x][0] == this.DiffEqual) {
+                    diffs2.push(diffs[x]);
+                    continue;
+                }
+                var subDiffs = this.diff_main(diffs[x][1], '', false);
+                diffs2 = diffs2.concat(subDiffs);
+            }
+            return diffs2;
+        };
+
+        DiffMatchPatch.prototype.diff_linesToChars = function(text1, text2) {
+            var lineArray = [];
+            var lineHash = {};
+            lineArray[0] = '';
+
+            function diff_linesToCharsMunge(text) {
+                var chars = '';
+                var lineStart = 0;
+                var lineEnd = -1;
+                while (lineEnd < text.length - 1) {
+                    lineEnd = text.indexOf('\n', lineStart);
+                    if (lineEnd == -1) {
+                        lineEnd = text.length - 1;
+                    }
+                    var line = text.substring(lineStart, lineEnd + 1);
+                    lineStart = lineEnd + 1;
+                    if (lineHash.hasOwnProperty(line)) {
+                        chars += String.fromCharCode(lineHash[line]);
+                    } else {
+                        lineArray.push(line);
+                        lineHash[line] = lineArray.length - 1;
+                        chars += String.fromCharCode(lineArray.length - 1);
+                    }
+                }
+                return chars;
+            }
+
+            var chars1 = diff_linesToCharsMunge(text1);
+            var chars2 = diff_linesToCharsMunge(text2);
+            return {chars1: chars1, chars2: chars2, lineArray: lineArray};
+        };
+
+        DiffMatchPatch.prototype.diff_charsToLines = function(diffs, lineArray) {
+            for (var x = 0; x < diffs.length; x++) {
+                var chars = diffs[x][1];
+                var text = [];
+                for (var y = 0; y < chars.length; y++) {
+                    text[y] = lineArray[chars.charCodeAt(y)];
+                }
+                diffs[x][1] = text.join('');
+            }
+        };
+
+        DiffMatchPatch.prototype.diff_cleanupMerge = function(diffs) {
+            diffs.push([this.DiffEqual, '']);
+            var changes = false;
+            var equalBuffer = [];
+            var deleteBuffer = [];
+            var insertBuffer = [];
+            var pos = 0;
+            while (pos < diffs.length) {
+                if (diffs[pos][0] == this.DiffEqual) {
+                    equalBuffer.push(diffs[pos][1]);
+                    deleteBuffer = [];
+                    insertBuffer = [];
+                    pos++;
+                } else if (diffs[pos][0] == this.DiffDelete) {
+                    deleteBuffer.push(diffs[pos][1]);
+                    pos++;
+                } else if (diffs[pos][0] == this.DiffInsert) {
+                    insertBuffer.push(diffs[pos][1]);
+                    pos++;
+                }
+
+                if (equalBuffer.length && deleteBuffer.length && insertBuffer.length) {
+                    var equalStr = equalBuffer.pop();
+                    var deleteStr = deleteBuffer.join('');
+                    var insertStr = insertBuffer.join('');
+                    var overlapLen1 = this.diff_commonSuffix(deleteStr, equalStr);
+                    if (overlapLen1) {
+                        diffs.splice(pos - deleteBuffer.length - insertBuffer.length - 1, 3,
+                            [this.DiffEqual, equalStr.substring(0, equalStr.length - overlapLen1)],
+                            [this.DiffDelete, equalStr.substring(equalStr.length - overlapLen1) + deleteStr],
+                            [this.DiffInsert, equalStr.substring(equalStr.length - overlapLen1) + insertStr]);
+                        pos = pos - deleteBuffer.length - insertBuffer.length - 1 + 3;
+                        equalBuffer = [];
+                        deleteBuffer = [];
+                        insertBuffer = [];
+                        changes = true;
+                        continue;
+                    }
+
+                    var overlapLen2 = this.diff_commonPrefix(insertStr, equalStr);
+                    if (overlapLen2) {
+                        diffs.splice(pos - deleteBuffer.length - insertBuffer.length - 1, 3,
+                            [this.DiffDelete, deleteStr + equalStr.substring(0, overlapLen2)],
+                            [this.DiffInsert, insertStr + equalStr.substring(0, overlapLen2)],
+                            [this.DiffEqual, equalStr.substring(overlapLen2)]);
+                        pos = pos - deleteBuffer.length - insertBuffer.length - 1 + 3;
+                        equalBuffer = [];
+                        deleteBuffer = [];
+                        insertBuffer = [];
+                        changes = true;
+                        continue;
+                    }
+                }
+            }
+
+            if (diffs[diffs.length - 1][1] === '') {
+                diffs.pop();
+            }
+
+            var changes2;
+            do {
+                changes2 = false;
+                for (var x = 1; x < diffs.length - 1; x++) {
+                    if (diffs[x - 1][0] == this.DiffEqual && diffs[x + 1][0] == this.DiffEqual) {
+                        if (diffs[x][1].endsWith(diffs[x - 1][1])) {
+                            diffs[x][1] = diffs[x - 1][1] + diffs[x][1].substring(0, diffs[x][1].length - diffs[x - 1][1].length);
+                            diffs[x + 1][1] = diffs[x - 1][1] + diffs[x + 1][1];
+                            diffs.splice(x - 1, 1);
+                            changes2 = true;
+                            break;
+                        }
+                        if (diffs[x][1].startsWith(diffs[x + 1][1])) {
+                            diffs[x - 1][1] += diffs[x + 1][1];
+                            diffs[x][1] = diffs[x][1].substring(diffs[x + 1][1].length) + diffs[x + 1][1];
+                            diffs.splice(x + 1, 1);
+                            changes2 = true;
+                            break;
+                        }
+                    }
+                }
+            } while (changes2);
+
+            var pointer = 0;
+            while (pointer < diffs.length) {
+                if (diffs[pointer][1] === '') {
+                    diffs.splice(pointer, 1);
+                    changes = true;
+                    continue;
+                }
+                if (pointer > 0 && diffs[pointer - 1][0] == diffs[pointer][0]) {
+                    diffs[pointer - 1][1] += diffs[pointer][1];
+                    diffs.splice(pointer, 1);
+                    changes = true;
+                    continue;
+                }
+                pointer++;
+            }
+            return changes;
+        };
+
+        var dmp = new DiffMatchPatch();
+
+        function loadFile(type) {
+            var fileInput = document.getElementById(type + 'File');
+            var fileNameEl = document.getElementById(type + 'FileName');
+            var textarea = document.getElementById(type + 'Text');
+            
+            if (fileInput.files.length === 0) {
+                fileNameEl.textContent = '未选择文件';
+                return;
+            }
+            
+            var file = fileInput.files[0];
+            fileNameEl.textContent = file.name + ' 加载中... <span class="loading"></span>';
+            
+            var reader = new FileReader();
+            
+            if (file.name.endsWith('.txt')) {
+                reader.onload = function(e) {
+                    textarea.value = e.target.result;
+                    fileNameEl.textContent = file.name + ' 已加载';
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else if (file.name.endsWith('.docx')) {
+                reader.onload = function(e) {
+                    mammoth.extractRawText({arrayBuffer: e.target.result})
+                        .then(function(result) {
+                            textarea.value = result.value;
+                            fileNameEl.textContent = file.name + ' 已加载';
+                        })
+                        .catch(function(err) {
+                            alert('Word文档解析失败: ' + err);
+                            fileNameEl.textContent = '加载失败';
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.name.endsWith('.pdf')) {
+                reader.onload = function(e) {
+                    var typedArray = new Uint8Array(e.target.result);
+                    pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+                        var textContent = '';
+                        var countPromises = [];
+                        for (var i = 1; i <= pdf.numPages; i++) {
+                            countPromises.push(pdf.getPage(i).then(function(page) {
+                                return page.getTextContent();
+                            }).then(function(content) {
+                                var strings = content.items.map(function(item) {
+                                    return item.str;
+                                });
+                                return strings.join(' ');
+                            }));
+                        }
+                        Promise.all(countPromises).then(function(texts) {
+                            textarea.value = texts.join('\n\n');
+                            fileNameEl.textContent = file.name + ' 已加载';
+                        });
+                    }).catch(function(err) {
+                        alert('PDF文档解析失败: ' + err);
+                        fileNameEl.textContent = '加载失败';
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function compareText() {
+            var oldText = document.getElementById('oldText').value;
+            var newText = document.getElementById('newText').value;
+            var mode = document.getElementById('diffMode').value;
+
+            if (!oldText && !newText) {
+                alert('请先输入文本内容');
+                return;
+            }
+
+            var diffs = dmp.diff_main(oldText, newText, true);
+            
+            var addCount = 0;
+            var removeCount = 0;
+            var modifyCount = 0;
+            var resultHtml = '';
+
+            for (var i = 0; i < diffs.length; i++) {
+                var type = diffs[i][0];
+                var text = diffs[i][1].replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                
+                if (type === dmp.DiffInsert) {
+                    resultHtml += '<span class="diff-add">' + text + '</span>';
+                    addCount++;
+                } else if (type === dmp.DiffDelete) {
+                    resultHtml += '<span class="diff-remove">' + text + '</span>';
+                    removeCount++;
+                } else {
+                    resultHtml += text;
+                }
+            }
+
+            modifyCount = Math.min(addCount, removeCount);
+            
+            document.getElementById('diffResult').innerHTML = resultHtml;
+            document.getElementById('addCount').textContent = addCount;
+            document.getElementById('removeCount').textContent = removeCount;
+            document.getElementById('modifyCount').textContent = modifyCount;
+            document.getElementById('stats').style.display = 'flex';
+        }
+
+        function clearAll() {
+            document.getElementById('oldText').value = '';
+            document.getElementById('newText').value = '';
+            document.getElementById('diffResult').innerHTML = '请输入文本后点击"开始对比"按钮查看差异';
+            document.getElementById('stats').style.display = 'none';
+        }
+
+        function swapText() {
+            var oldText = document.getElementById('oldText').value;
+            var newText = document.getElementById('newText').value;
+            document.getElementById('oldText').value = newText;
+            document.getElementById('newText').value = oldText;
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                compareText();
+            }
+        });
+    </script>
+</body>
+</html>
